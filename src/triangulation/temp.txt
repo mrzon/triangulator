@@ -1,0 +1,634 @@
+//********************************************************************
+//  DoublyConnectedEdgeList.java
+//
+//  Represents the polygon by its vertices, edges, and facess
+//  modified on April 2, 2011  by Emerson Chan Simbolon (0806334773).
+//********************************************************************
+package triangulation;
+
+import java.util.*;
+import java.awt.*;
+
+/**
+*
+*/
+public class DoublyConnectedEdgeList
+{
+	ArrayList<Face> faceList;
+	ArrayList<HalfEdge> edgeList;
+	ArrayList<Vertex> vertexList;
+	ArrayList<MyPolygon> myPolygon;
+	ArrayList<Face> fList = new ArrayList<Face>();
+
+	private ArrayList<ArrayList<Vertex>> listOfPolygon = new ArrayList<ArrayList<Vertex>>();
+
+
+        /**
+         *
+         */
+        public DoublyConnectedEdgeList()
+	{
+		faceList = new ArrayList<Face>();
+		edgeList = new ArrayList<HalfEdge>();
+		vertexList = new ArrayList<Vertex>();
+		myPolygon = new ArrayList<MyPolygon>();
+	}
+
+
+        /**
+         *
+         * @param f
+         */
+        public void addFace(Face f)
+	{
+		faceList.add(f);
+	}
+
+
+        /**
+         *
+         * @param v
+         */
+        public void addVertex(Vertex v)
+	{
+		vertexList.add(v);
+	}
+
+
+        /**
+         *
+         * @param e
+         */
+        public void addEdge(HalfEdge e)
+	{
+		edgeList.add(e);
+	}
+
+        /**
+         *
+         * @param v
+         * @return
+         */
+        public boolean onLeft(Vertex v, Face f)
+	{
+		//System.out.println(v+" is in on "+ (v.compareTo(v.incidentEdge.next.origin) < 0 ? "left":"right")+" side");
+		return v.compareTo(v.incidentEdge.get(f).next.origin) < 0;
+	}
+
+
+        public Face getFace(int i)
+        {
+            return faceList.get(i);
+        }
+
+        public Face getFace(Vertex v)
+        {
+            return v.incidentEdge.keySet().iterator().next();
+        }
+        /**
+         *
+         * @param vertexList
+         */
+        public void build(ArrayList<Vertex> vertexList)
+	{
+		addFace(new Face(0, null, null));
+		addFace(new Face(1, null, null));
+		int vC = vertexList.size();
+
+		HalfEdge prevH = new HalfEdge(0, vertexList.get(1), faceList.get(0));
+		HalfEdge nextH = new HalfEdge(0, vertexList.get(0), faceList.get(1));
+                getFace(0).innerComponent = prevH;
+                getFace(1).outerComponent = nextH;
+		//System.out.println(nextH.origin);
+		//
+		prevH.twin=nextH;
+		nextH.twin=prevH;
+		//
+		vertexList.get(0).incidentEdge.put(faceList.get(1), nextH);
+                vertexList.get(0).incidentEdge.put(faceList.get(0), prevH);
+                vertexList.get(0).incidentEdgeOriginal = nextH;
+		edgeList.add(prevH);
+		edgeList.add(nextH);
+
+		for(int j = 1,k = vC-1; j < vC-1; j++,k--)
+		{
+			HalfEdge he1 = new HalfEdge(j, vertexList.get(j+1), faceList.get(0));
+			HalfEdge he2 = new HalfEdge(j, vertexList.get(j), faceList.get(1));
+                        vertexList.get(j).incidentEdgeOriginal = he2;
+			//
+			he1.twin = he2;
+			he2.twin = he1;
+			//
+			prevH.prev = he1;
+			prevH.prevOriginal = he1;
+			he1.next = prevH;
+			he1.nextOriginal = prevH;
+			//
+			nextH.next=he2;
+			nextH.nextOriginal=he2;
+
+			he2.prev = nextH;
+			he2.prevOriginal = nextH;
+			//
+			vertexList.get(j).incidentEdge.put(faceList.get(1),he2);
+                        vertexList.get(j+1).incidentEdge.put(faceList.get(0),he1);
+			edgeList.add(he1);
+			edgeList.add(he2);
+			prevH = he1;
+			nextH = he2;
+			//System.out.println(nextH.origin);
+		}
+		HalfEdge prevL = new HalfEdge(vC-1, vertexList.get(0), faceList.get(0));
+		HalfEdge nextL = new HalfEdge(vC-1, vertexList.get(vC-1), faceList.get(1));
+		//
+		prevL.twin = nextL;
+		nextL.twin = prevL;
+		//
+		prevL.prev = edgeList.get(0);
+		prevL.prevOriginal = edgeList.get(0);
+		edgeList.get(0).next = prevL;
+		edgeList.get(0).nextOriginal = prevL;
+		//
+		nextL.next = edgeList.get(1);
+		nextL.nextOriginal = edgeList.get(1);
+		edgeList.get(1).prev = nextL;
+		edgeList.get(1).prevOriginal = nextL;
+		//
+		prevH.prev = prevL;
+		prevH.prevOriginal = prevL;
+		prevL.next = prevH;
+		prevL.nextOriginal = prevH;
+		//
+		nextH.next = nextL;
+		nextH.nextOriginal = nextL;
+		nextL.prev = nextH;
+		nextL.prevOriginal = nextH;
+		//
+		vertexList.get(vC-1).incidentEdge.put(faceList.get(0), nextL);
+                vertexList.get(0).incidentEdge.put(faceList.get(1),prevL);
+                vertexList.get(vC-1).incidentEdgeOriginal = nextL;
+		faceList.get(0).innerComponent = edgeList.get(0);
+		faceList.get(1).outerComponent = edgeList.get(1);
+		edgeList.add(prevL);
+		edgeList.add(nextL);
+		//System.out.println(nextL.origin);
+		this.vertexList = vertexList;
+                HalfEdge hh = faceList.get(1).outerComponent;
+                HalfEdge hj = hh;
+	}
+
+	/**
+	*
+         *
+         * @param pList
+         */
+	public void processPolygon(ArrayList<Polygon> pList)
+	{
+                Face f = faceList.get(1);
+		PriorityQueue<Vertex> q = new PriorityQueue<Vertex>(vertexList);
+		BinarySearchTree<HalfEdge> bst = new BinarySearchTree<HalfEdge>();
+		while(!q.isEmpty())
+		{
+			Vertex v = q.poll();
+			Vertex r = v.incidentEdge.get(f).next.origin;
+			Vertex l = v.incidentEdge.get(f).prev.origin;
+			if(v.compareTo(r) < 0 && v.compareTo(l) < 0)
+			{
+				if(MyPoint.left(r.position.getPoint(),v.position.getPoint(), l.position.getPoint()))
+				{
+					v.type = Vertex.STARTVERTEX;
+					handleStartVertex(v,bst);
+				}
+				else
+				{
+					v.type = Vertex.SPLITVERTEX;
+					handleSplitVertex(v,bst);
+				}
+			}
+			else if(v.compareTo(r) > 0 && v.compareTo(l) > 0)
+			{
+				if(MyPoint.left(r.position.getPoint(),v.position.getPoint(), l.position.getPoint()))
+				{
+					v.type = Vertex.ENDVERTEX;
+					handleEndVertex(v, bst);
+				}
+				else
+				{
+					v.type = Vertex.MERGEVERTEX;
+					handleMergeVertex(v, bst);
+				}
+			}
+			else
+			{
+				handleRegularVertex(v, bst);
+			}
+			System.out.println(v);
+			System.out.println(bst);
+
+		}
+
+		HashSet<HalfEdge> set = new HashSet<HalfEdge>();
+
+                for(int i = 1; i < faceList.hashCode(); i++)
+                {
+                    HalfEdge h0 = faceList.get(i).outerComponent;
+                    HalfEdge h1 = h0;
+                    Polygon p = new Polygon();
+                    ArrayList<Vertex> a = new ArrayList<Vertex>();
+                    MyPolygon m = new MyPolygon();
+                    while(h1.next != h0)
+                    {
+                        p.addPoint(h1.origin.getPosition().getX(), h1.origin.getPosition().getY());
+                        m.addPoint(h1.origin.getPosition().getX(), h1.origin.getPosition().getY());
+                        a.add(h1.origin);
+                        h1 = h1.next;
+                    }
+
+                    pList.add(p);
+                    myPolygon.add(m);
+                    listOfPolygon.add(a);
+                }
+	}
+
+
+	/**
+	*
+	* @return
+	*/
+	private void handleRegularVertex(Vertex v, BinarySearchTree<HalfEdge> bst)
+	{
+                Face f = getFace(v);
+                //jika v berada disebelah kiri
+		if(v.compareTo(v.incidentEdge.get(f).next.origin) < 0)
+		{
+			Vertex helper = v.incidentEdge.get(f).prev.helper;
+			if(helper.type == Vertex.MERGEVERTEX)
+			{
+				createDiagonal(f, v, helper);
+			}
+			bst.delete(v.incidentEdge.get(f).prev);
+			bst.add(v.incidentEdge.get(f));
+			v.incidentEdge.get(f).helper = v;
+		}
+		else
+		{
+			bst.add(v.incidentEdge.get(f));
+			Node<HalfEdge> h = getTheLeftEdge(v.incidentEdge.get(f).prev, bst.getRoot(), bst.getRoot());
+			bst.delete(v.incidentEdge.get(f).prev);
+
+			Vertex helper = h.getData().helper;
+			if(helper.type == Vertex.MERGEVERTEX)
+			{
+				createDiagonal(f, v, helper);
+			}
+			h.data.helper = v;
+		}
+	}
+
+
+	/**
+	*
+	* @return
+	*/
+	private void handleStartVertex(Vertex v, BinarySearchTree<HalfEdge> bst)
+	{
+                Face f = getFace(v);
+		HalfEdge c = v.incidentEdge.get(f);
+		bst.add(c);
+		c.helper = v;
+	}
+
+
+	/**
+	*
+	* @return
+	*/
+	private void handleEndVertex(Vertex v, BinarySearchTree<HalfEdge> bst)
+	{
+                Face f = getFace(v);
+		Vertex helper = v.incidentEdge.get(f).prev.getHelper();
+
+		if(helper.type == Vertex.MERGEVERTEX)
+		{
+			//System.out.println("helpernya "+v+v.incidentEdge.prevOriginal+ "adalah "+v.incidentEdge.prevOriginal.helper);
+			createDiagonal(f, v, helper);
+		}
+		bst.delete(v.incidentEdge.get(f).prev);
+	}
+
+
+	/**
+	*
+	* @return
+	*/
+	private void handleMergeVertex(Vertex v, BinarySearchTree<HalfEdge> bst)
+	{
+                Face f = getFace(v);
+		Vertex helper = v.incidentEdge.get(f).prev.helper;
+		if(helper.type == Vertex.MERGEVERTEX)
+		{
+			createDiagonal(f, v, helper);
+		}
+
+		//bst.delete(v.incidentEdge.prev);
+		//bst.add(v.incidentEdge.prev);
+		Node<HalfEdge> h = getTheLeftEdge(v.incidentEdge.get(f).prev, bst.getRoot(),bst.getRoot());
+
+		bst.delete(v.incidentEdge.get(f).prev);
+
+		if(h.getData().helper.type == Vertex.MERGEVERTEX)
+		{
+			createDiagonal(f,v, h.getData().helper);
+		}
+		h.getData().helper = v;
+	}
+
+
+	/**
+	*
+	* @return
+	*/
+	private void handleSplitVertex(Vertex v, BinarySearchTree<HalfEdge> bst)
+	{
+                Face f = getFace(v);
+		bst.add(v.incidentEdge.get(f));
+		Node<HalfEdge> h = getTheLeftEdge(v.incidentEdge.get(f), bst.getRoot(), bst.getRoot());
+
+		//System.out.println("eh nemu split vertex, "+v);
+		createDiagonal(f,v, h.getData().helper);
+                f = getFace(v);
+		h.getData().helper = v;
+		v.incidentEdge.get(f).helper = v;
+	}
+
+
+	int i = 100;
+        /**
+         *
+         * @param u
+         * @param v
+         */
+        public void createDiagonal(Face f, Vertex u, Vertex v)
+	{
+            Face f1 = new Face(faceList.size(),null,null);
+            HalfEdge he = new HalfEdge(i++,u,f);
+            HalfEdge hf = new HalfEdge(i++,v,f);
+            HalfEdge temp = he;
+            if(u.position.getX() > v.position.getX())
+            {
+                u.incidentEdge.put(f1,he);
+                he.incidentFace = f1;
+            }
+            else
+            {
+                v.incidentEdge.put(f1,hf);
+                hf.incidentFace = f1;
+                temp = hf;
+            }
+            f1.outerComponent = hf;
+            addFace(f1);
+            he.next = v.incidentEdge.get(f);
+            hf.next = u.incidentEdge.get(f);
+
+            he.prev = u.incidentEdge.get(f).prev;
+            hf.prev = v.incidentEdge.get(f).prev;
+
+            u.incidentEdge.get(f).prev.next = he;
+            v.incidentEdge.get(f).prev.next = hf;
+
+            hf.twin = he;
+            he.twin = hf;
+            u.incidentEdge.get(f).prev = hf;
+            v.incidentEdge.get(f).prev = he;
+
+
+            //
+            //
+            HalfEdge ff = temp;
+
+            while(ff.next != temp)
+            {
+                ff.origin.changeFace(f, f1);
+                ff = ff.next;
+            }
+
+	}
+
+        /**
+         *
+         * @param u
+         * @param v
+         */
+        public void createSimpleDiagonal(Face f, Vertex u, Vertex v)
+	{
+		HalfEdge he = new HalfEdge(i++,u,null);
+		HalfEdge hf = new HalfEdge(i++,v,null);
+
+                he.next = v.incidentEdge.get(f);
+		hf.next = u.incidentEdge.get(f);
+
+		he.prev = u.incidentEdge.get(f).prev;
+		hf.prev = v.incidentEdge.get(f).prev;
+
+		u.incidentEdge.get(f).prev.next = he;
+		v.incidentEdge.get(f).prev.next = hf;
+
+		hf.twin = he;
+		he.twin = hf;
+		u.incidentEdge.get(f).prev = hf;
+		v.incidentEdge.get(f).prev = he;
+
+		//dcount++;
+	}
+
+
+        /**
+         *
+         * @param pList
+         */
+        public void triangulateMonoton(ArrayList<Polygon> pList)
+	{
+		//dcount = 0;
+
+		//System.out.println("daftar polygon yang ada: "+ listOfPolygon);
+                ArrayList<DoublyConnectedEdgeList> dcelList = new ArrayList<DoublyConnectedEdgeList>();
+		for(int i = 0; i < myPolygon.size(); i++)
+		{
+                        DoublyConnectedEdgeList dcel = new DoublyConnectedEdgeList();
+                        dcel.build(myPolygon.get(i).getVertexList());
+                        dcelList.add(dcel);
+			ArrayList<Vertex> arrV = dcel.vertexList;
+                        Collections.sort(arrV);
+			System.out.println("========================\npolygon yang dibuat adalah sebagai berikut: \n"+arrV+"\n==================");
+			Stack<Vertex> tri = new Stack<Vertex> ();
+			tri.push(arrV.get(0));
+			tri.push(arrV.get(1));
+			for(int j = 2; j < arrV.size()-1 ; j++)
+			{
+				if(isOnDifferentChains(faceList.get(i),tri.peek(), arrV.get(j)))
+				{
+					while(tri.size() > 1)
+					{
+						createSimpleDiagonal(faceList.get(i),tri.pop(), arrV.get(j));
+					}
+					tri.clear();
+					tri.push(arrV.get(j-1));
+					tri.push(arrV.get(j));
+				}
+				else
+				{
+					Vertex v = tri.pop();
+					while(tri.size() > 0)
+					{
+						Vertex u = tri.peek();
+						//System.out.println("tri setelah dikurang "+tri);
+						if(onLeft(arrV.get(j),faceList.get(i))){
+							if(MyPoint.left(arrV.get(j).position, v.position, u.position))
+							{
+								//System.out.println("buat diagonal antara "+u+" dengan "+ arrV.get(j));
+								createSimpleDiagonal(faceList.get(i),tri.pop(), arrV.get(j));
+								v = u;
+							}
+							else
+							{
+								//System.out.println("oh tidak bisa, ditambah lagi deh");
+
+								break;
+							}
+						}
+						else
+						{
+							if(!MyPoint.left(arrV.get(j).position, v.position, u.position))
+							{
+								createSimpleDiagonal(faceList.get(i),tri.pop(), arrV.get(j));
+								v = u;
+							}
+							else
+							{
+								break;
+							}
+						}
+						//System.out.println(tri);
+					}
+					//System.out.println("tri sebelum ditambahkan "+tri);
+
+					tri.push(v);
+					tri.push(arrV.get(j));
+				//	System.out.println("tri setelah ditambahkan "+tri);
+				}
+				//System.out.println("state poligon ke-"+i+" "+j+tri);
+			}
+ if(tri.size()>0)
+			{
+				//System.out.println("\ndaftar stack tak bertuan "+tri);
+				tri.remove(tri.size()-1);
+				while(tri.size()>1)
+				{
+					Vertex v = tri.remove(tri.size()-1);
+					createSimpleDiagonal(faceList.get(i),v, arrV.get(arrV.size()-1));
+					//tri.add(v);
+				}
+
+			}
+
+		}
+		int countFace = 2;
+		//pList = new ArrayList<Polygon>();
+		fList = new ArrayList<Face>();
+		HashSet<HalfEdge> set = new HashSet<HalfEdge>();
+		for(int i = 0; i < dcelList.size(); i++)
+		{
+			for(int j = 0; j < dcelList.get(i).vertexList.size(); j++)
+			{
+				HalfEdge h0 = dcelList.get(i).vertexList.get(j).incidentEdge.get(faceList.get(i));
+				if(!set.contains(h0))
+				{
+					Face f = new Face(countFace, h0, null);
+					HalfEdge h = h0;
+					Polygon p = new Polygon();
+					while(!set.contains(h))
+					{
+						set.add(h);
+						h.incidentFace = f;
+						h.yes = false;
+						p.addPoint(h.origin.getPosition().getX(), h.origin.getPosition().getY());
+
+						h = h.next;
+					}
+					pList.add(p);
+					fList.add(f);
+					countFace++;
+				}
+			}
+
+		}
+		//System.out.println("jumlah segitiga dilihat dari dcel" + pList.size());
+	}
+
+
+        /**
+         *
+         * @param u
+         * @param v
+         * @return
+         */
+        public boolean isOnDifferentChains(Face f, Vertex u, Vertex v)
+	{
+		return ((onLeft(u,f) && !onLeft(v,f)) || (!onLeft(u,f) && onLeft(v,f)));
+	}
+
+
+	/**
+	* method ini buat nyari edge yang berada tepat di sebelah kiri suatu vertex
+	* @param he
+	*
+	* @param r
+         * @param left
+         * @return
+	*/
+	public Node<HalfEdge> getTheLeftEdge(HalfEdge he, Node<HalfEdge> r, Node<HalfEdge> left)
+	{
+		//System.out.println(he+" "+r.getData());
+		if(r!= null && r.right != null){
+			if(r.right.getData().equals(he))
+			{
+				if(r.right.left == null)
+					return r;
+			}
+		}
+		if(he.equals(r.getData()))
+		{
+		//	System.out.println("lagi nyari "+he+" yang dibawa ya ini "+left.getData());
+			return r.left==null? left : getTheMostRight(r.left);
+		}
+
+		else if(r.getData().compareTo(he) < 0)
+		{
+
+			return getTheLeftEdge(he, r.right, r);
+		}
+		else{
+			return getTheLeftEdge(he, r.left, left);
+		}
+
+
+	}
+
+
+        /**
+         *
+         * @param r
+         * @return
+         */
+        public Node<HalfEdge> getTheMostRight(Node<HalfEdge> r)
+	{
+		if(r.right != null)
+		{
+			return getTheMostRight(r.right);
+		}
+		return r;
+	}
+
+
+}
+
